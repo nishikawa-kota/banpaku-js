@@ -1,104 +1,100 @@
 javascript:(function(){
-      try {
-          // 視覚的フィードバック用の通知表示
-          function showNotification(message) {
-              var div = document.createElement('div');
-              div.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:white;padding:10px 
-  20px;border-radius:5px;z-index:9999;font-size:14px;';
-              div.textContent = message;
-              document.body.appendChild(div);
+      alert('スクリプト開始');
+
+      var wheelchairWords = ['車いす', '車椅子', '車いす対応', '車いす使用者', '車いす専用'];
+      var hiddenCount = 0;
+      var clickCount = 0;
+
+      function findAndHide() {
+          // 様々な方法でイベント行を探す
+          var allDivs = document.querySelectorAll('div[class*="search_item"], div[class*="item_row"], div[class*="result"] button');
+
+          allDivs.forEach(function(elem) {
+              // ボタン要素かその親要素を探す
+              var button = elem.tagName === 'BUTTON' ? elem : elem.querySelector('button');
+              if (!button) return;
+
+              var text = button.textContent || button.innerText || '';
+
+              // 車椅子関連をチェック（モンハンは除外）
+              var hasWheelchair = wheelchairWords.some(function(word) {
+                  return text.indexOf(word) !== -1;
+              });
+
+              var hasMonHun = text.indexOf('モンスターハンター') !== -1 || text.indexOf('モンハン') !== -1;
+
+              if (hasWheelchair && !hasMonHun) {
+                  // ボタンの親要素を非表示
+                  var parent = button.closest('div[class*="row"]') || button.parentElement;
+                  if (parent && parent.style.display !== 'none') {
+                      parent.style.display = 'none';
+                      hiddenCount++;
+                  }
+              }
+          });
+
+          if (hiddenCount > 0) {
+              alert(hiddenCount + '件を非表示にしました');
+          }
+      }
+
+      function clickMoreButton() {
+          // もっと見るボタンを探す（複数の方法）
+          var moreButton = null;
+
+          // 方法1: テキストで探す
+          var allButtons = document.querySelectorAll('button:not([disabled])');
+          for (var i = 0; i < allButtons.length; i++) {
+              var btn = allButtons[i];
+              var btnText = btn.textContent || btn.innerText || '';
+              if (btnText.indexOf('もっと見る') !== -1) {
+                  moreButton = btn;
+                  break;
+              }
+          }
+
+          // 方法2: クラス名の部分一致
+          if (!moreButton) {
+              moreButton = document.querySelector('button[class*="more"]:not([disabled])');
+          }
+
+          if (moreButton) {
+              clickCount++;
+              alert('もっと見るボタン発見！クリック回数: ' + clickCount);
+
+              // クリックイベントを複数の方法で試す
+              try {
+                  moreButton.click();
+              } catch(e) {
+                  var evt = document.createEvent('MouseEvents');
+                  evt.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+                  moreButton.dispatchEvent(evt);
+              }
+
+              // クリック後にフィルター実行
               setTimeout(function() {
-                  if (div.parentNode) div.parentNode.removeChild(div);
-              }, 3000);
+                  findAndHide();
+                  // 再度もっと見るを探す
+                  setTimeout(clickMoreButton, 3000);
+              }, 2000);
+          } else {
+              alert('もっと見るボタンが見つかりません');
           }
+      }
 
-          showNotification('フィルター開始');
+      // デバッグ情報表示
+      function showDebugInfo() {
+          var searchResults = document.querySelector('div[class*="result"], div[class*="search"]');
+          var buttonCount = document.querySelectorAll('button').length;
+          alert('検索結果エリア: ' + (searchResults ? 'あり' : 'なし') + '\nボタン総数: ' + buttonCount);
+      }
 
-          var count = 0;
-          var wheelchairWords = ['車いす', '車椅子', '車いす対応', '車いす使用者', '車いす専用', '車いす限定'];
-          var monsterHunter = ['モンスターハンター', 'モンハン'];
-
-          // フィルター実行
-          function doFilter() {
-              var rows = document.querySelectorAll('.style_search_item_row__moqWC');
-              var hidden = 0;
-
-              for (var i = 0; i < rows.length; i++) {
-                  var row = rows[i];
-                  var titleEl = row.querySelector('.style_search_item_title__aePLg');
-
-                  if (titleEl) {
-                      var title = titleEl.textContent || '';
-                      var hasWheelchair = false;
-                      var isMonHun = false;
-
-                      // 車椅子チェック
-                      for (var j = 0; j < wheelchairWords.length; j++) {
-                          if (title.indexOf(wheelchairWords[j]) !== -1) {
-                              hasWheelchair = true;
-                              break;
-                          }
-                      }
-
-                      // モンハンチェック
-                      for (var k = 0; k < monsterHunter.length; k++) {
-                          if (title.indexOf(monsterHunter[k]) !== -1) {
-                              isMonHun = true;
-                              break;
-                          }
-                      }
-
-                      // 車椅子あり＆モンハンなし＝非表示
-                      if (hasWheelchair && !isMonHun) {
-                          row.style.display = 'none';
-                          hidden++;
-                      }
-                  }
-              }
-
-              if (hidden > 0) {
-                  showNotification(hidden + '件を非表示にしました');
-              }
-              return hidden;
-          }
-
-          // もっと見るクリック
-          function clickMore() {
-              var buttons = document.querySelectorAll('button');
-              var moreBtn = null;
-
-              for (var i = 0; i < buttons.length; i++) {
-                  var btn = buttons[i];
-                  if (!btn.disabled && btn.textContent && btn.textContent.indexOf('もっと見る') !== -1) {
-                      moreBtn = btn;
-                      break;
-                  }
-              }
-
-              if (moreBtn) {
-                  count++;
-                  showNotification('もっと見る ' + count + '回目');
-                  moreBtn.click();
-
-                  // クリック後にフィルター実行
-                  setTimeout(function() {
-                      doFilter();
-                      // 次のクリックを予約
-                      setTimeout(clickMore, 4000);
-                  }, 2000);
-              } else {
-                  showNotification('完了');
-                  doFilter();
-              }
-          }
-
-          // 開始
-          setTimeout(function() {
-              doFilter();
-              clickMore();
-          }, 1000);
-
-      } catch (e) {
+      // 実行
+      try {
+          showDebugInfo();
+          findAndHide();
+          setTimeout(clickMoreButton, 1000);
+      } catch(e) {
           alert('エラー: ' + e.message);
       }
   })();
